@@ -15,7 +15,8 @@ const ProductoSchema = new mongoose.Schema({
     stockExhibe: { type: Number, required: true },
     stockExhibeMin: { type: Number, required: true }, // Stock mínimo de exhibición
     stockAlmacen: { type: Number, required: true },
-    stockAlmacenMin: { type: Number, required: true } // Stock mínimo de almacén
+    stockAlmacenMin: { type: Number, required: true }, // Stock mínimo de almacén
+    imagen: { type: String }  // Guardar la imagen como Base64
 });
 
 module.exports = mongoose.model('Producto', ProductoSchema);

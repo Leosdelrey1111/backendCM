@@ -5,7 +5,7 @@ const Proveedor = require('../models/Proveedor');
 // Registrar un producto con proveedor existente
 exports.registrarProducto = async (req, res) => {
     try {
-        const { nombreProveedor, ...productoData } = req.body;
+        const { nombreProveedor, imagen, ...productoData } = req.body;
 
         // Verificar si el proveedor existe
         const proveedorExistente = await Proveedor.findOne({ nombre: nombreProveedor });
@@ -14,7 +14,8 @@ exports.registrarProducto = async (req, res) => {
             return res.status(400).json({ message: "El proveedor no existe" });
         }
 
-        const producto = new Producto({ nombreProveedor, ...productoData });
+        // Crear producto con imagen (URL)
+        const producto = new Producto({ nombreProveedor, imagen, ...productoData });
         await producto.save();
 
         res.json({ message: "Producto registrado", producto });
@@ -27,7 +28,7 @@ exports.registrarProducto = async (req, res) => {
 exports.editarProducto = async (req, res) => {
     try {
         const { id } = req.params;
-        const { precioCaja, precioPieza } = req.body;
+        const { precioCaja, precioPieza, imagen } = req.body;
 
         const producto = await Producto.findById(id);
         if (!producto) {
@@ -46,6 +47,7 @@ exports.editarProducto = async (req, res) => {
         // Actualizar producto
         producto.precioCaja = precioCaja || producto.precioCaja;
         producto.precioPieza = precioPieza || producto.precioPieza;
+        producto.imagen = imagen || producto.imagen;  // Actualizar imagen si se proporciona
         await producto.save();
 
         // Guardar historial solo si cambió el precio
@@ -70,62 +72,26 @@ exports.eliminarProducto = async (req, res) => {
     }
 };
 
-// Actualizar stock en exhibición con validación de stock mínimo
-exports.actualizarStockExhibe = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { stockExhibe } = req.body;
-
-        const producto = await Producto.findById(id);
-        if (!producto) {
-            return res.status(404).json({ message: "Producto no encontrado" });
-        }
-
-        producto.stockExhibe = stockExhibe;
-        await producto.save();
-
-        let message = "Stock en exhibición actualizado";
-        if (stockExhibe < producto.stockExhibeMin) {
-            message += " - Alerta: Se debe reabastecer en exhibición";
-        }
-
-        res.json({ message, producto });
-    } catch (error) {
-        res.status(500).json({ message: "Error al actualizar stock en exhibición", error });
-    }
-};
-
-// Actualizar stock en almacén con validación de stock mínimo
-exports.actualizarStockAlmacen = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { stockAlmacen } = req.body;
-
-        const producto = await Producto.findById(id);
-        if (!producto) {
-            return res.status(404).json({ message: "Producto no encontrado" });
-        }
-
-        producto.stockAlmacen = stockAlmacen;
-        await producto.save();
-
-        let message = "Stock en almacén actualizado";
-        if (stockAlmacen < producto.stockAlmacenMin) {
-            message += " - Alerta: Se debe reabastecer en almacén";
-        }
-
-        res.json({ message, producto });
-    } catch (error) {
-        res.status(500).json({ message: "Error al actualizar stock en almacén", error });
-    }
-};
-
-// Obtener todos los productos con los proveedores
+// Obtener todos los productos
 exports.getProductos = async (req, res) => {
     try {
         const productos = await Producto.find();
         res.json({ message: "Lista de productos", productos });
     } catch (error) {
         res.status(500).json({ message: "Error al obtener productos", error });
+    }
+};
+exports.getProductoById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const producto = await Producto.findById(id);
+
+        if (!producto) {
+            return res.status(404).json({ message: "Producto no encontrado" });
+        }
+
+        res.json({ producto });
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener el producto", error });
     }
 };

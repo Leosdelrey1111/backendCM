@@ -1,24 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { getProductos, registrarProducto, editarProducto, eliminarProducto, actualizarStockExhibe, actualizarStockAlmacen } = require('../controller/productoController');
+const { getProductos, registrarProducto, editarProducto, eliminarProducto, getProductoById } = require('../controller/productoController');
 
-
-// Obtener todos los productos con filtros
+// Rutas de productos
 router.get('/', getProductos);
-
-// Registrar un producto
+router.get('/:id', getProductoById);  // Ruta para obtener producto por ID
 router.post('/', registrarProducto);
-
-// Editar un producto por ID
 router.put('/:id', editarProducto);
-
-// Eliminar un producto por ID
 router.delete('/:id', eliminarProducto);
-
-// Actualizar stock en exhibición
-router.put('/stockExhibe/:id', actualizarStockExhibe);
-
-// Actualizar stock en almacén
-router.put('/stockAlmacen/:id', actualizarStockAlmacen);
 
 module.exports = router;
