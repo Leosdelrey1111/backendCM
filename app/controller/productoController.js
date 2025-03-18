@@ -65,6 +65,53 @@ exports.registrarProducto = async (req, res) => {
     }
 };
 
+exports.bajaTemporalProducto = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Actualizar el producto y marcarlo como inactivo (activo: false)
+        const producto = await Producto.findByIdAndUpdate(id, { activo: false }, { new: true });
+
+        if (!producto) {
+            return res.status(404).json({ message: 'Producto no encontrado' });
+        }
+
+        res.json({ message: 'Producto dado de baja temporalmente', producto });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error al dar baja temporal al producto', error });
+    }
+};
+
+// Nueva función para reactivar un producto
+exports.reactivarProducto = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const producto = await Producto.findByIdAndUpdate(id, { activo: true }, { new: true });
+
+        if (!producto) {
+            return res.status(404).json({ message: 'Producto no encontrado' });
+        }
+
+        res.json({ message: 'Producto reactivado', producto });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error al reactivar el producto', error });
+    }
+};
+
+// Obtener todos los productos activos
+exports.getProductos = async (req, res) => {
+    try {
+        const productos = await Producto.find({ activo: true }); // Filtrar solo productos activos
+        res.json({ message: "Lista de productos", productos });
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener productos", error });
+    }
+};
+
+
+
 // Función para generar un número de lote único
 function generarLote(producto) {
     const fecha = new Date().toISOString().slice(0, 10); // Fecha en formato YYYY-MM-DD
