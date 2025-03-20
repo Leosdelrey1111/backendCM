@@ -18,12 +18,14 @@ const proveedorRoutes = require('./app/routes/proveedorRoutes');
 const productoRoutes = require('./app/routes/productoRoutes');
 const inventarioRoutes = require('./app/routes/inventarioRoutes');
 const historialRoutes = require('./app/routes/historialRoutes');
+const authRoutes = require('./app/routes/authRoutes');
 
 // Definir rutas
 app.use('/api/proveedores', proveedorRoutes);
 app.use('/api/productos', productoRoutes);
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/historial', historialRoutes);
+app.use('/api/auth', authRoutes);
 
 app.get('/', (req, res) => {
     res.send({ data: 'Hola profe Torres 🚀' });
