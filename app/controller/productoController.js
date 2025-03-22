@@ -218,3 +218,34 @@ exports.getProductoById = async (req, res) => {
         res.status(500).json({ message: "Error al obtener el producto", error });
     }
 };
+
+exports.actualizarStockExhibe = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { stockExhibe } = req.body;
+  
+        // Verificar si el producto existe
+        const producto = await Producto.findById(id);
+        if (!producto) {
+            return res.status(404).json({ message: "Producto no encontrado" });
+        }
+  
+        // Verificar si stockExhibe es un número válido
+        if (typeof stockExhibe !== 'number') {
+            return res.status(400).json({ message: "stockExhibe debe ser un número" });
+        }
+  
+        // Actualizar solo el stockExhibe
+        console.log("Actualizando stockExhibe a:", stockExhibe);  // Verifica que el valor correcto esté llegando
+        producto.stockExhibe = stockExhibe;
+  
+        // Guardar los cambios
+        await producto.save();
+  
+        res.json({ message: "Stock exhibido actualizado", producto });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error al actualizar el stock exhibido", error: error.message });
+    }
+  };
+  

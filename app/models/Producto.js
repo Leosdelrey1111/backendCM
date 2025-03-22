@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const ProductoSchema = new mongoose.Schema({
     codigoBarras: { type: String, required: true },
     nombreProducto: { type: String, required: true },
-    tamano: { type: String, required: true },
+    tamano: { type: String, required: false },
     categoriaMaquillaje: { type: String },
     subcategoria: { type: String },
     marca: { type: String },

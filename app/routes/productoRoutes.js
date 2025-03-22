@@ -7,7 +7,8 @@ const {
     eliminarProducto, 
     getProductoById, 
     bajaTemporalProducto, 
-    reactivarProducto 
+    reactivarProducto,
+    actualizarStockExhibe
 } = require('../controller/productoController');
 
 // Rutas de productos
@@ -22,5 +23,8 @@ router.patch('/baja-temporal/:id', bajaTemporalProducto);
 
 // Nueva ruta para reactivar producto
 router.patch('/reactivar/:id', reactivarProducto);
+
+router.put('/productos/:id/stockExhibe', actualizarStockExhibe);
+
 
 module.exports = router;
