@@ -8,8 +8,8 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Función para comparar contraseñas
-UserSchema.methods.comparePassword = async function(password) {
-    return await (password, this.password);
+UserSchema.methods.comparePassword = async function(candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
 };
 
 module.exports = mongoose.model('User', UserSchema);
