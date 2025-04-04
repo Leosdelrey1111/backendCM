@@ -1,13 +1,11 @@
-const express = require('express');
-const authController = require('../controller/authController');
+const express = require("express");
 const router = express.Router();
+const authController = require("../controller/authController");
 
-// Rutas existentes
-router.post('/login', authController.login);
-router.post('/register', authController.register);
+router.post("/registro", authController.registrarUsuario);
+router.post("/login", authController.iniciarSesion);
 
-// Nuevas rutas para gestionar usuarios
-router.get('/users', authController.getUsers); // Obtener todos los usuarios
-router.delete('/users/:id', authController.deleteUser); // Eliminar un usuario
+// Ruta para obtener todos los usuarios
+router.get("/usuarios", authController.obtenerUsuarios);
 
 module.exports = router;
