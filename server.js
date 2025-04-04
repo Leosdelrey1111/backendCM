@@ -14,18 +14,18 @@ app.use(express.json());
 app.use(cors());
 
 // Importar rutas
-const proveedorRoutes = require('./app/routes/proveedorRoutes');
-const productoRoutes = require('./app/routes/productoRoutes');
-const inventarioRoutes = require('./app/routes/inventarioRoutes');
-const historialRoutes = require('./app/routes/historialRoutes');
 const authRoutes = require('./app/routes/authRoutes');
+const citasRoutes = require('./app/routes/citas');
+const historicoRoutes = require('./app/routes/historico');
+const medicosRoutes = require('./app/routes/medicos');
+const especialidadesRoutes = require('./app/routes/especialidades');
 
 // Definir rutas
-app.use('/api/proveedores', proveedorRoutes);
-app.use('/api/productos', productoRoutes);
-app.use('/api/inventario', inventarioRoutes);
-app.use('/api/historial', historialRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/citas', citasRoutes);
+app.use('/api/historico', historicoRoutes);
+app.use('/api/medicos', medicosRoutes);
+app.use('/api/especialidades', especialidadesRoutes);
 
 app.get('/', (req, res) => {
     res.send({ data: 'Hola profe Torres 🚀' });
