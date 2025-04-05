@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 const Cita = require("../models/Citas");
 const Medico = require("../models/Medico");
@@ -27,11 +28,8 @@ exports.obtenerCitas = async (req, res) => {
   }
 };
 
-// 2. Crear nueva cita (Transaccional con validación mejorada)
+// 2. Crear nueva cita (Sin transacciones)
 exports.crearCita = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const camposRequeridos = ['medico', 'fecha', 'hora', 'paciente', 'especialidad'];
     const faltantes = camposRequeridos.filter(campo => !req.body[campo]);
@@ -117,7 +115,7 @@ exports.crearCita = async (req, res) => {
       estado
     });
 
-    await cita.save({ session });
+    await cita.save();
 
     // Crear histórico
     const historico = new Historico({
@@ -126,32 +124,23 @@ exports.crearCita = async (req, res) => {
       especialidad: especialidad,
       fecha: fechaObj,
       hora: hora,
-      estado: estado,
-      motivo: motivo
+      estado
     });
 
-    await historico.save({ session });
+    await historico.save();
 
-    await session.commitTransaction();
-    res.status(201).json({ mensaje: "Cita creada con éxito", cita });
-
+    res.status(201).json({ mensaje: "Cita agendada con éxito", cita });
   } catch (error) {
-    await session.abortTransaction();
-    res.status(500).json({
-      mensaje: "Error al crear la cita",
-      error: error.message
-    });
-  } finally {
-    session.endSession();
+    console.error('Error al crear la cita:', error);
+    res.status(500).json({ mensaje: 'Error al crear la cita', error: error.message });
   }
 };
-
 // 5. Obtener citas filtradas
 exports.obtenerCitasFiltradas = async (req, res) => {
   try {
     const filtro = {};
     
-    // Compatibilidad con método GET o POST
+    // Obtener parámetros de la consulta
     const params = req.method === 'GET' ? req.query : req.body;
     const { especialidad, medico, fecha, hora, estado, paciente } = params;
 
@@ -161,6 +150,7 @@ exports.obtenerCitasFiltradas = async (req, res) => {
     if (hora) filtro.hora = hora;
     if (estado) filtro.estado = estado;
     
+    // Si se proporciona fecha, filtrar por el rango de ese día
     if (fecha) {
       const fechaObj = new Date(fecha);
       const inicioDia = new Date(fechaObj.setUTCHours(0, 0, 0, 0));
@@ -202,53 +192,29 @@ exports.actualizarEstadoCita = async (req, res) => {
 
 
 // Editar cita
+// Modificar el método editarCita para devolver el objeto actualizado
 exports.editarCita = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
-    console.log("Datos para editar cita:", req.body);
     const { id } = req.params;
-    const actualizacion = req.body;
-
     const citaActualizada = await Cita.findByIdAndUpdate(
       id,
-      actualizacion,
-      { new: true, session }
-    ).populate('paciente medico');
+      req.body,
+      { new: true }
+    ).populate('medico', 'nombre especialidad');
 
     if (!citaActualizada) {
       return res.status(404).json({ mensaje: "Cita no encontrada" });
     }
 
-    // Actualizar histórico
-    await Historico.findOneAndUpdate(
-      { 
-        paciente: citaActualizada.paciente._id,
-        fecha: citaActualizada.fecha
-      },
-      {
-        motivo: citaActualizada.motivo,
-        fechaActualizacion: new Date(),
-        estado: citaActualizada.estado
-      },
-      { session }
-    );
-
-    await session.commitTransaction();
     res.json(citaActualizada);
-
+    
   } catch (error) {
-    await session.abortTransaction();
     res.status(500).json({ 
       mensaje: "Error al actualizar cita",
       error: error.message 
     });
-  } finally {
-    session.endSession();
   }
 };
-
 // 7. Eliminar cita
 exports.eliminarCita = async (req, res) => {
   const { id } = req.params;
@@ -278,6 +244,7 @@ exports.eliminarCita = async (req, res) => {
     });
   }
 };
+
 exports.obtenerCitasPorMedico = async (req, res) => {
   const medicoId = req.params.medicoId;
 
@@ -369,3 +336,48 @@ exports.obtenerCitasPorMedicoAceptada = async (req, res) => {
     res.status(500).json({ mensaje: 'Error interno al buscar citas', error: error.message });
   }
 };
+
+
+// Obtener citas por usuario
+// controllers/citaController.js
+exports.obtenerCitasPorUsuario = async (req, res) => {
+  try {
+    const usuarioId = req.params.usuarioId;
+    
+    if (!mongoose.Types.ObjectId.isValid(usuarioId)) {
+      return res.status(400).json({ mensaje: "ID de usuario inválido" });
+    }
+
+    const citas = await Cita.find({ paciente: usuarioId })
+      .populate('medico', 'nombre especialidad')
+      .lean();
+
+    res.json(citas);
+    
+  } catch (error) {
+    res.status(500).json({
+      mensaje: "Error al obtener citas",
+      error: error.message
+    });
+  }
+};
+// Obtener médicos
+exports.getMedicos = async (req, res) => {
+  try {
+    const medicos = await Medico.find().select('nombre especialidad');
+    res.json(medicos);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Obtener especialidades
+exports.getEspecialidades = async (req, res) => {
+  try {
+    const especialidades = await Medico.distinct('especialidad');
+    res.json(especialidades);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
