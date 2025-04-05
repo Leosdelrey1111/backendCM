@@ -291,7 +291,53 @@ exports.obtenerCitasPorMedico = async (req, res) => {
     const medicoObjectId = new mongoose.Types.ObjectId(medicoId);
     
     // Obtener todas las citas para un médico
-    const citas = await Cita.find({ medico: medicoObjectId }).lean();
+    const citas = await Cita.find({ medico: medicoObjectId,estado: 'Pendiente' }).lean();
+
+    if (!citas || citas.length === 0) {
+      return res.status(404).json({ mensaje: 'No se encontraron citas para este médico' });
+    }
+
+    // Obtener los nombres completos de los pacientes basados en el ObjectId
+    for (let cita of citas) {
+      const _id = cita.paciente; // Obtener el ID del paciente
+      if (_id) {
+        // Buscar el nombre del paciente en la colección de usuarios
+        const paciente = await Usuario.findById(_id).select('nombreCompleto');
+        
+        // Verificar qué está devolviendo la consulta
+        console.log("Paciente encontrado:", paciente);
+        
+        if (paciente) {
+          cita.pacienteNombre = paciente.nombreCompleto; // Añadir el nombre completo al objeto cita
+        }
+      }
+    }
+
+    // Retornar las citas con el nombre completo del paciente
+    res.status(200).json({ citas });
+
+  } catch (error) {
+    console.error('Error al buscar citas:', error);
+    res.status(500).json({ mensaje: 'Error interno al buscar citas', error: error.message });
+  }
+};
+
+
+
+exports.obtenerCitasPorMedicoAceptada = async (req, res) => {
+  const medicoId = req.params.medicoId;
+
+  try {
+    console.log("ID del médico recibido:", medicoId);
+
+    if (!mongoose.Types.ObjectId.isValid(medicoId)) {
+      return res.status(400).json({ mensaje: 'ID de médico no válido' });
+    }
+
+    const medicoObjectId = new mongoose.Types.ObjectId(medicoId);
+    
+    // Obtener todas las citas para un médico
+    const citas = await Cita.find({ medico: medicoObjectId,estado: 'Confirmada' }).lean();
 
     if (!citas || citas.length === 0) {
       return res.status(404).json({ mensaje: 'No se encontraron citas para este médico' });

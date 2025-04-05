@@ -10,5 +10,6 @@ router.delete("/:id", citaController.eliminarCita);
 router.post("/filtrar", citaController.obtenerCitasFiltradas);
 router.patch('/estado/:id', citaController.actualizarEstadoCita);
 router.get("/citasmedico/:medicoId", citaController.obtenerCitasPorMedico);
+router.get("/citasmedicoa/:medicoId", citaController.obtenerCitasPorMedicoAceptada);
 
 module.exports = router;
