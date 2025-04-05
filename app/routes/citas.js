@@ -8,8 +8,7 @@ router.post("/", citaController.crearCita);
 router.put("/:id", citaController.editarCita);
 router.delete("/:id", citaController.eliminarCita);
 router.post("/filtrar", citaController.obtenerCitasFiltradas);
-router.put("/estado/:id", citaController.actualizarEstadoCita);
-
-
+router.patch('/estado/:id', citaController.actualizarEstadoCita);
+router.get("/citasmedico/:medicoId", citaController.obtenerCitasPorMedico);
 
 module.exports = router;

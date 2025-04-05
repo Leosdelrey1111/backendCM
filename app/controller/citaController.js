@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Cita = require("../models/Citas");
 const Medico = require("../models/Medico");
 const Historico = require("../models/historico");
+const Usuario = require("../models/Usuario");
 
 const normalizeString = (str) => 
   str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -181,54 +182,24 @@ exports.obtenerCitasFiltradas = async (req, res) => {
   }
 };
 
-// 6. Actualizar estado de cita
 exports.actualizarEstadoCita = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const { id } = req.params;
+  const { estado } = req.body;
 
   try {
-    const { id, estado } = req.params;
-    const estadosPermitidos = ["Pendiente", "Confirmada", "Atendida", "Cancelada", "Completada"];
+    const cita = await Cita.findByIdAndUpdate(id, { estado }, { new: true });
 
-    if (!estadosPermitidos.includes(estado)) {
-      return res.status(400).json({ mensaje: "Estado inválido" });
+    if (!cita) {
+      return res.status(404).send('Cita no encontrada');
     }
 
-    const citaActualizada = await Cita.findByIdAndUpdate(
-      id,
-      { estado },
-      { new: true, session }
-    ).populate('paciente', '_id');
-
-    if (!citaActualizada) {
-      return res.status(404).json({ mensaje: "Cita no encontrada" });
-    }
-
-    await Historico.findOneAndUpdate(
-      { 
-        paciente: citaActualizada.paciente._id,
-        fecha: citaActualizada.fecha
-      },
-      { 
-        estado,
-        fechaActualizacion: new Date()
-      },
-      { session }
-    );
-
-    await session.commitTransaction();
-    res.json(citaActualizada);
-
+    return res.status(200).json(cita);
   } catch (error) {
-    await session.abortTransaction();
-    res.status(500).json({ 
-      mensaje: "Error al actualizar estado",
-      error: error.message 
-    });
-  } finally {
-    session.endSession();
+    console.error(error);
+    return res.status(500).send('Error al actualizar el estado');
   }
 };
+
 
 // Editar cita
 exports.editarCita = async (req, res) => {
@@ -305,5 +276,48 @@ exports.eliminarCita = async (req, res) => {
       mensaje: "Error al eliminar cita",
       error: error.message
     });
+  }
+};
+exports.obtenerCitasPorMedico = async (req, res) => {
+  const medicoId = req.params.medicoId;
+
+  try {
+    console.log("ID del médico recibido:", medicoId);
+
+    if (!mongoose.Types.ObjectId.isValid(medicoId)) {
+      return res.status(400).json({ mensaje: 'ID de médico no válido' });
+    }
+
+    const medicoObjectId = new mongoose.Types.ObjectId(medicoId);
+    
+    // Obtener todas las citas para un médico
+    const citas = await Cita.find({ medico: medicoObjectId }).lean();
+
+    if (!citas || citas.length === 0) {
+      return res.status(404).json({ mensaje: 'No se encontraron citas para este médico' });
+    }
+
+    // Obtener los nombres completos de los pacientes basados en el ObjectId
+    for (let cita of citas) {
+      const _id = cita.paciente; // Obtener el ID del paciente
+      if (_id) {
+        // Buscar el nombre del paciente en la colección de usuarios
+        const paciente = await Usuario.findById(_id).select('nombreCompleto');
+        
+        // Verificar qué está devolviendo la consulta
+        console.log("Paciente encontrado:", paciente);
+        
+        if (paciente) {
+          cita.pacienteNombre = paciente.nombreCompleto; // Añadir el nombre completo al objeto cita
+        }
+      }
+    }
+
+    // Retornar las citas con el nombre completo del paciente
+    res.status(200).json({ citas });
+
+  } catch (error) {
+    console.error('Error al buscar citas:', error);
+    res.status(500).json({ mensaje: 'Error interno al buscar citas', error: error.message });
   }
 };

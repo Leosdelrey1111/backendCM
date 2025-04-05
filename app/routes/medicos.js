@@ -4,4 +4,5 @@ const medicoController = require("../controller/medicoController");
 
 router.get("/", medicoController.obtenerMedicos);
 
+
 module.exports = router;

@@ -60,7 +60,12 @@ exports.iniciarSesion = async (req, res) => {
     }
 
     // Responder con los datos del usuario (sin JWT)
-    res.json({ usuario });
+    res.json({
+      usuario: {
+        _id: usuario._id,
+        correo: usuario.correo,
+        rol: usuario.rol
+  }});
   } catch (error) {
     res.status(500).json({ mensaje: "Error al iniciar sesión", error });
   }
