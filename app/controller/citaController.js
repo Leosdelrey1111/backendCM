@@ -336,8 +336,10 @@ exports.obtenerCitasPorMedicoAceptada = async (req, res) => {
 
     const medicoObjectId = new mongoose.Types.ObjectId(medicoId);
     
-    // Obtener todas las citas para un médico
-    const citas = await Cita.find({ medico: medicoObjectId,estado: 'Confirmada' }).lean();
+    const citas = await Cita.find({ 
+      medico: medicoObjectId,
+      estado: { $in: ['Confirmada', 'Atendida'] }
+    }).lean();
 
     if (!citas || citas.length === 0) {
       return res.status(404).json({ mensaje: 'No se encontraron citas para este médico' });
