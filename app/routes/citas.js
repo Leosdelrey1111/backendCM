@@ -12,4 +12,8 @@ router.patch('/estado/:id', citaController.actualizarEstadoCita);
 router.get("/citasmedico/:medicoId", citaController.obtenerCitasPorMedico);
 router.get("/citasmedicoa/:medicoId", citaController.obtenerCitasPorMedicoAceptada);
 
+// routes/citas.js
+router.get('/usuario/:usuarioId', citaController.obtenerCitasPorUsuario);
+
+
 module.exports = router;
