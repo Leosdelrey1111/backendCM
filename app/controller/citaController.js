@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 const Cita = require("../models/Citas");
 const Medico = require("../models/Medico");
@@ -26,11 +27,8 @@ exports.obtenerCitas = async (req, res) => {
   }
 };
 
-// 2. Crear nueva cita (Transaccional con validación mejorada)
+// 2. Crear nueva cita (Sin transacciones)
 exports.crearCita = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const camposRequeridos = ['medico', 'fecha', 'hora', 'paciente', 'especialidad'];
     const faltantes = camposRequeridos.filter(campo => !req.body[campo]);
@@ -116,7 +114,7 @@ exports.crearCita = async (req, res) => {
       estado
     });
 
-    await cita.save({ session });
+    await cita.save();
 
     // Crear histórico
     const historico = new Historico({
@@ -125,26 +123,17 @@ exports.crearCita = async (req, res) => {
       especialidad: especialidad,
       fecha: fechaObj,
       hora: hora,
-      estado: estado,
-      motivo: motivo
+      estado
     });
 
-    await historico.save({ session });
+    await historico.save();
 
-    await session.commitTransaction();
-    res.status(201).json({ mensaje: "Cita creada con éxito", cita });
-
+    res.status(201).json({ mensaje: "Cita agendada con éxito", cita });
   } catch (error) {
-    await session.abortTransaction();
-    res.status(500).json({
-      mensaje: "Error al crear la cita",
-      error: error.message
-    });
-  } finally {
-    session.endSession();
+    console.error('Error al crear la cita:', error);
+    res.status(500).json({ mensaje: 'Error al crear la cita', error: error.message });
   }
 };
-
 // 5. Obtener citas filtradas
 exports.obtenerCitasFiltradas = async (req, res) => {
   try {
