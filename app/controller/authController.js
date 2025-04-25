@@ -64,7 +64,8 @@ exports.iniciarSesion = async (req, res) => {
       usuario: {
         _id: usuario._id,
         correo: usuario.correo,
-        rol: usuario.rol
+        rol: usuario.rol,
+        nombreCompleto: usuario.nombreCompleto
   }});
   } catch (error) {
     res.status(500).json({ mensaje: "Error al iniciar sesión", error });
@@ -75,7 +76,7 @@ exports.iniciarSesion = async (req, res) => {
 exports.obtenerUsuarios = async (req, res) => {
   try {
     // Obtener todos los usuarios, excluyendo la contraseña
-    const usuarios = await Usuario.find({}, { contraseña: 0 }); // No devolver la contraseña
+    const usuarios = await Usuario.find({}); // No devolver la contraseña
 
     if (!usuarios) {
       return res.status(404).json({ mensaje: "No se encontraron usuarios" });

@@ -1,19 +1,28 @@
 const express = require("express");
-const router = express.Router();
-const citaController = require("../controller/citaController"); // Nombre correcto
+const router  = express.Router();
+const ctrl    = require("../controller/citaController");
 
-// Rutas principales
-router.get("/", citaController.obtenerCitas);
-router.post("/", citaController.crearCita);
-router.put("/:id", citaController.editarCita);
-router.delete("/:id", citaController.eliminarCita);
-router.post("/filtrar", citaController.obtenerCitasFiltradas);
-router.patch('/estado/:id', citaController.actualizarEstadoCita);
-router.get("/citasmedico/:medicoId", citaController.obtenerCitasPorMedico);
-router.get("/citasmedicoa/:medicoId", citaController.obtenerCitasPorMedicoAceptada);
+// ————————————————————————
+// DISPONIBILIDAD (parámetro)
+router.get(
+  "/disponibilidad/:medicoId",
+  ctrl.obtenerDisponibilidad
+);
 
-// routes/citas.js
-router.get('/usuario/:usuarioId', citaController.obtenerCitasPorUsuario);
+// Otras rutas con parámetros
+router.get("/usuario/:usuarioId",      ctrl.obtenerCitasPorUsuario);
+router.get("/citasmedico/:medicoId",   ctrl.obtenerCitasPorMedico);
+router.get("/citasmedicoa/:medicoId",  ctrl.obtenerCitasPorMedicoAceptada);
+router.post("/filtrar",                ctrl.obtenerCitasFiltradas);
+router.patch("/estado/:id",            ctrl.actualizarEstadoCita);
 
+// ————————————————————————
+// Rutas “planas”
+router.get("/",    ctrl.obtenerCitas);
+router.post("/",   ctrl.crearCita);
+router.put("/:id", ctrl.editarCita);
+router.delete("/:id", ctrl.eliminarCita);
+// Otras rutas con parámetros
+router.get("/usuario/:usuarioId", ctrl.obtenerCitasPorUsuario);
 
 module.exports = router;
