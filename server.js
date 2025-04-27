@@ -2,6 +2,7 @@ const express = require('express');
 const connectDB = require('./config/db');
 const cors = require('cors');
 require('dotenv').config();
+require('./app/controller/cron');
 
 // Inicializar app
 const app = express();

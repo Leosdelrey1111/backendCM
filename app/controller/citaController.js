@@ -117,6 +117,7 @@ exports.crearCita = async (req, res) => {
       medico,
       fecha: { $gte: inicioDia, $lte: finDia },
       hora,
+      estado: { $ne: "Cancelada" } // <- Agregar esta línea
     });
     if (ya) {
       return res.status(400).json({ mensaje: "Ese horario ya está ocupado." });
@@ -200,46 +201,144 @@ exports.actualizarEstadoCita = async (req, res) => {
 };
 
 // 7. Editar cita
+// 7. Editar cita
 exports.editarCita = async (req, res) => {
   const { id } = req.params;
-  const { fecha, hora, medico, especialidad, paciente, motivo } = req.body;
+  const { fecha, hora, medico, especialidad, paciente, motivo = "" } = req.body;
 
   try {
-    const cita = await Cita.findByIdAndUpdate(id, {
-      fecha,
-      hora,
+    // Validar campos
+    const campos = ["medico", "fecha", "hora", "paciente", "especialidad"];
+    const faltantes = campos.filter((c) => !req.body[c]);
+    if (faltantes.length) {
+      return res
+        .status(400)
+        .json({ mensaje: `Faltan: ${faltantes.join(", ")}` });
+    }
+
+    if (
+      !mongoose.Types.ObjectId.isValid(medico) ||
+      !mongoose.Types.ObjectId.isValid(paciente)
+    ) {
+      return res.status(400).json({ mensaje: "ID inválido" });
+    }
+
+    // Parsear fecha y hora correctamente
+    const [year, month, day] = fecha.split("-").map((n) => parseInt(n, 10));
+    const [hour, minute] = hora.split(":").map((n) => parseInt(n, 10));
+    const fechaHora = new Date(year, month - 1, day, hour, minute, 0, 0);
+
+    if (fechaHora < new Date()) {
+      return res.status(400).json({ mensaje: "La cita debe ser en el futuro." });
+    }
+
+    // Validar médico
+    const medicoInfo = await Medico.findById(medico);
+    if (!medicoInfo)
+      return res.status(404).json({ mensaje: "Médico no encontrado" });
+
+    const diaTextoArr = [
+      "domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"
+    ];
+    const diaTexto = diaTextoArr[fechaHora.getDay()];
+    if (!medicoInfo.diasLaborales.map(normalizeString).includes(normalizeString(diaTexto))) {
+      return res.status(400).json({ mensaje: `El médico no atiende los ${diaTexto}.` });
+    }
+
+    // Validar horario del médico
+    const [iniH, iniM] = medicoInfo.horario.inicio.split(":").map((n) => +n);
+    const [finH, finM] = medicoInfo.horario.fin.split(":").map((n) => +n);
+    const turnoIni = new Date(fechaHora);
+    turnoIni.setHours(iniH, iniM, 0, 0);
+    const turnoFin = new Date(fechaHora);
+    turnoFin.setHours(finH, finM, 0, 0);
+
+    if (fechaHora < turnoIni || fechaHora >= turnoFin) {
+      return res.status(400).json({
+        mensaje: `Fuera de horario. Disponible de ${medicoInfo.horario.inicio} a ${medicoInfo.horario.fin}.`
+      });
+    }
+
+    // Validar conflicto exacto de hora (sin contar esta misma cita)
+    const inicioDia = new Date(fechaHora);
+    inicioDia.setHours(0, 0, 0, 0);
+    const finDia = new Date(fechaHora);
+    finDia.setHours(23, 59, 59, 999);
+
+    const ya = await Cita.findOne({
+      _id: { $ne: id }, // No contarme a mí mismo
       medico,
-      especialidad,
+      fecha: { $gte: inicioDia, $lte: finDia },
+      hora,
+      estado: { $ne: "Cancelada" } // <- Agregar esta línea
+    });
+    if (ya) {
+      return res.status(400).json({ mensaje: "Ese horario ya está ocupado." });
+    }
+
+    // Actualizar cita
+    const cita = await Cita.findByIdAndUpdate(id, {
       paciente,
+      medico,
+      fecha: fechaHora,
+      hora,
+      especialidad,
       motivo,
     }, { new: true });
+
     if (!cita) return res.status(404).send("Cita no encontrada");
 
-    res.json(cita);
+    res.json({ mensaje: "Cita actualizada correctamente", cita });
   } catch (error) {
     console.error(error);
-    res.status(500).send("Error al editar la cita");
+    res.status(500).json({ mensaje: "Error al editar la cita", error: error.message });
   }
 };
+
 
 
 // 8. Eliminar cita
-exports.eliminarCita = async (req, res) => {
+// exports.eliminarCita = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const citaEliminada = await Cita.findByIdAndDelete(id);
+//     if (!citaEliminada)
+//       return res.status(404).json({ mensaje: "Cita no encontrada" });
+//     await Historico.findOneAndDelete({
+//       paciente: citaEliminada.paciente,
+//       fecha: citaEliminada.fecha,
+//     });
+//     res.json({ mensaje: "Cita eliminada con éxito", cita: citaEliminada });
+//   } catch (error) {
+//     res.status(500).json({ mensaje: "Error al eliminar cita", error });
+//   }
+// };
+
+// 8. Cancelar cita (en lugar de eliminar)
+exports.cancelarCita = async (req, res) => {
   try {
     const { id } = req.params;
-    const citaEliminada = await Cita.findByIdAndDelete(id);
-    if (!citaEliminada)
-      return res.status(404).json({ mensaje: "Cita no encontrada" });
-    await Historico.findOneAndDelete({
-      paciente: citaEliminada.paciente,
-      fecha: citaEliminada.fecha,
-    });
-    res.json({ mensaje: "Cita eliminada con éxito", cita: citaEliminada });
+    
+    const cita = await Cita.findByIdAndUpdate(
+      id,
+      { estado: "Cancelada" },
+      { new: true }
+    );
+    
+    if (!cita) return res.status(404).json({ mensaje: "Cita no encontrada" });
+    
+    // Actualizar histórico
+    await Historico.findOneAndUpdate(
+      { cita: id },
+      { estado: "Cancelada" },
+      { new: true }
+    );
+    
+    res.json({ mensaje: "Cita cancelada con éxito", cita });
   } catch (error) {
-    res.status(500).json({ mensaje: "Error al eliminar cita", error });
+    res.status(500).json({ mensaje: "Error al cancelar cita", error });
   }
 };
-
 // 9. Otras consultas...
 
 exports.obtenerCitasPorMedico = async (req, res) => { /* ... */ };
@@ -261,11 +360,10 @@ exports.obtenerDisponibilidad = async (req, res) => {
       return res.status(404).json({ mensaje: "Médico no encontrado" });
 
     const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
     const inicio = startDate ? new Date(startDate) : hoy;
-    const fin = endDate
+    const fin = endDate 
       ? new Date(endDate)
-      : new Date(hoy.getTime() + 7 * 24 * 3600_000);
+      : new Date(hoy.getFullYear(), hoy.getMonth() + 3, 0); // 3 meses hacia adelante
 
     const disponibilidad = [];
     for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
@@ -298,10 +396,12 @@ exports.obtenerDisponibilidad = async (req, res) => {
       });
       if (cnt >= medicoInfo.citasPorDia) continue;
 
-      const citasDia = await Cita.find({
-        medico: medicoId,
-        fecha: { $gte: inicioDia, $lte: finDia },
-      });
+    // En exports.obtenerDisponibilidad, modificar la consulta:
+    const citasDia = await Cita.find({
+      medico: medicoId,
+      fecha: { $gte: inicioDia, $lte: finDia },
+      estado: { $nin: ["Cancelada", "No atendida"] } // Ignorar estas citas
+    });
 
       const [hIni, mIni] = medicoInfo.horario.inicio.split(":").map((n) => +n);
       const [hFin, mFin] = medicoInfo.horario.fin.split(":").map((n) => +n);
@@ -483,3 +583,6 @@ exports.getMedicos = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+
