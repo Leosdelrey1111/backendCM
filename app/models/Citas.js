@@ -17,7 +17,7 @@ const CitaSchema = new mongoose.Schema({
     motivo: String,
     estado: { 
         type: String, 
-        enum: ["Pendiente", "Confirmada", "Completada", "Cancelada"], 
+        enum: ["Pendiente", "Confirmada", "Atendida", "Cancelada", "No atendida"], 
         default: "Pendiente" 
     }
 }, { 
@@ -26,18 +26,20 @@ const CitaSchema = new mongoose.Schema({
     toObject: { virtuals: true } 
 });
 
-CitaSchema.virtual('pacienteInfo', {
-    ref: 'Usuario',
-    localField: 'paciente',
-    foreignField: '_id',
-    justOne: true
-});
+    CitaSchema.virtual('pacienteInfo', {
+        ref: 'Usuario',
+        localField: 'paciente',
+        foreignField: '_id',
+        justOne: true
+    });
 
-CitaSchema.virtual('medicoInfo', {
-    ref: 'Medico',
-    localField: 'medico',
-    foreignField: '_id',
-    justOne: true
-});
+    CitaSchema.virtual('medicoInfo', {
+        ref: 'Medico',
+        localField: 'medico',
+        foreignField: '_id',
+        justOne: true
+    });
+
+
 
 module.exports = mongoose.model("Cita", CitaSchema);
