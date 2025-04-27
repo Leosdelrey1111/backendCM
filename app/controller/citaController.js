@@ -55,7 +55,6 @@ exports.crearCita = async (req, res) => {
     if (fechaHora < new Date()) {
       return res
         .status(400)
-        .json({ mensaje: "La cita debe ser en el futuro." });
     }
 
     // 3) Cargar médico y validar día laboral
@@ -80,7 +79,6 @@ exports.crearCita = async (req, res) => {
     ) {
       return res
         .status(400)
-        .json({ mensaje: `El médico no atiende los ${diaTexto}.` });
     }
 
     // 4) Validar rango de horario
@@ -93,7 +91,6 @@ exports.crearCita = async (req, res) => {
 
     if (fechaHora < turnoIni || fechaHora >= turnoFin) {
       return res.status(400).json({
-        mensaje: `Fuera de horario. Disponible de ${medicoInfo.horario.inicio} a ${medicoInfo.horario.fin}.`,
       });
     }
 
@@ -109,7 +106,6 @@ exports.crearCita = async (req, res) => {
     if (cnt >= (medicoInfo.citasPorDia || 0)) {
       return res
         .status(400)
-        .json({ mensaje: "Día completo, sin más citas disponibles." });
     }
 
     // 6) Conflicto exacto de hora
@@ -120,7 +116,6 @@ exports.crearCita = async (req, res) => {
       estado: { $ne: "Cancelada" } // <- Agregar esta línea
     });
     if (ya) {
-      return res.status(400).json({ mensaje: "Ese horario ya está ocupado." });
     }
 
     // 7) Crear cita e histórico
@@ -143,12 +138,12 @@ exports.crearCita = async (req, res) => {
       estado: "Pendiente",
     });
 
-    res.status(201).json({ mensaje: "Cita agendada con éxito", cita });
+    res.status(201).json(cita);
   } catch (error) {
     console.error("Error al crear la cita:", error);
     res
       .status(500)
-      .json({ mensaje: "Error al crear la cita", error: error.message });
+      res.status(500).json({ mensaje: "Error al crear la cita" });
   }
 };
 
@@ -178,10 +173,8 @@ exports.obtenerCitasFiltradas = async (req, res) => {
 
     res.json(citas);
   } catch (error) {
-    res.status(500).json({
-      mensaje: "Error al filtrar citas",
-      error: error.message,
-    });
+    console.error("Error al filtrar citas:", error);
+    res.status(500).json({ mensaje: "Error al filtrar citas" });
   }
 };
 
@@ -211,9 +204,7 @@ exports.editarCita = async (req, res) => {
     const campos = ["medico", "fecha", "hora", "paciente", "especialidad"];
     const faltantes = campos.filter((c) => !req.body[c]);
     if (faltantes.length) {
-      return res
-        .status(400)
-        .json({ mensaje: `Faltan: ${faltantes.join(", ")}` });
+      return res.status(400).json({ mensaje: `Faltan: ${faltantes.join(", ")}` });
     }
 
     if (
@@ -270,7 +261,7 @@ exports.editarCita = async (req, res) => {
       medico,
       fecha: { $gte: inicioDia, $lte: finDia },
       hora,
-      estado: { $ne: "Cancelada" } // <- Agregar esta línea
+      estado: { $ne: "Cancelada" }
     });
     if (ya) {
       return res.status(400).json({ mensaje: "Ese horario ya está ocupado." });
@@ -288,12 +279,27 @@ exports.editarCita = async (req, res) => {
 
     if (!cita) return res.status(404).send("Cita no encontrada");
 
-    res.json({ mensaje: "Cita actualizada correctamente", cita });
+    // ===> ACTUALIZAR TAMBIÉN EL HISTORICO:
+    await Historico.findOneAndUpdate(
+      { paciente: paciente, medico: medico, fecha: { $gte: inicioDia, $lte: finDia }, hora: hora },
+      {
+        paciente,
+        medico,
+        especialidad,
+        fecha: fechaHora,
+        hora,
+        motivo,
+        fechaActualizacion: new Date()
+      }
+    );
+
+    res.json({ mensaje: "Cita y historial actualizados correctamente", cita });
   } catch (error) {
     console.error(error);
     res.status(500).json({ mensaje: "Error al editar la cita", error: error.message });
   }
 };
+
 
 
 
